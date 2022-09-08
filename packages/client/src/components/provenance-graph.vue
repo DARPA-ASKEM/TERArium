@@ -7,17 +7,38 @@ import { ref, onMounted } from 'vue';
 import * as d3 from 'd3';
 
 function Tree(data: any, {
-  label = (d: any) => d.name, // given a node d, returns the display name
-  width = 640, // outer width, in pixels
-  height = 500, // outer height, in pixels
-  r = 4, // radius of nodes
-  padding = 1, // horizontal padding for first and last column
-  fill = "#999", // fill for nodes
-  stroke = "#555", // stroke for links
-  strokeWidth = 3.5, // stroke width for links
-  strokeOpacity = 0.4, // stroke opacity for links
-  halo = "#fff", // color of label halo
-  haloWidth = 3, // padding around the labels
+  //lGiven a node d, returns the display name
+  label = (d: any) => d.name,
+
+  // Outer width, in pixels
+  width = 640,
+
+  // Outer height, in pixels
+  height = 500,
+
+  // Radius of nodes
+  r = 4,
+
+  // Horizontal padding for first and last column
+  padding = 1,
+
+  // Fill for nodes
+  fill = "#999",
+
+  // Stroke for links
+  stroke = "#555",
+
+  // Stroke width for links
+  strokeWidth = 3.5,
+
+  // Stroke opacity for links
+  strokeOpacity = 0.4,
+
+  // Color of label halo
+  halo = "#fff",
+
+  // Padding around the labels
+  haloWidth = 3,
 } = {}) {
   const root = d3.hierarchy(data); // default 'd.children'
 
@@ -62,15 +83,14 @@ function Tree(data: any, {
   const node = svg.append("g")
     .selectAll("g")
     .data(root.descendants())
-    .join("g");
+    .enter()
+    .append('g')
+    .attr('transform', d => `translate(${d.y},${d.x})`);
 
   node.filter(d => d.data.type !== "simulation")
       .append("circle")
       .attr("fill", d => d.children ? stroke : fill)
-      .attr("r", r)
-      .each(d => {
-        console.log(d);
-      });
+      .attr("r", r);
 
   node.filter(d => d.data.type === "simulation")
       .append("rect")
@@ -80,7 +100,8 @@ function Tree(data: any, {
       .attr("height", 8)
       .attr("fill", "f80");
 
-  if (L) node.append("text")
+  if (L) {
+    node.append("text")
       .attr("dy", "0.32em")
       .attr("x", d => d.children ? -6 : 6)
       .attr("text-anchor", d => d.children ? "end" : "start")
@@ -88,6 +109,7 @@ function Tree(data: any, {
       .attr("stroke", halo)
       .attr("stroke-width", haloWidth)
       .text((_d, i) => L[i]);
+  }
 
   return svg.node();
 }
@@ -95,17 +117,25 @@ function Tree(data: any, {
 const root = ref(null);
 
 const data2 = Object({
-  name: "gromet",
+  name: 'gromet',
   children: [
     {
-      name: "add annotation"
+      name: 'add annotation',
+      children: [
+        {
+          name: 'add another annotation 22222'
+        }
+      ]
+    },
+    {
+      name: 'test'
     }
   ]
 });
 
 const blah = Tree(data2, {
   width: 600,
-  height: 300
+  height: 400
 });
 
 console.log(blah);
@@ -121,6 +151,8 @@ onMounted(() => {
     .attr('cy', 30)
     .attr('r', 10)
     .attr('fill', 'red');
+
+  root.value.appendChild(blah);
 });
 
 </script>
