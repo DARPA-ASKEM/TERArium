@@ -41,8 +41,8 @@ let mergedModel: PetriNet = { T: [], S: [], I: [], O: [] };
 const petrinets: PetriNet[] = [
 	// generic
 	{
-		T: [{ tname: 't-1' }, { tname: 't-2' }],
-		S: [{ sname: 'p-1' }, { sname: 'p-2' }, { sname: 'p-3' }],
+		T: [{ tname: 'T1' }, { tname: 'T2' }],
+		S: [{ sname: 'P1' }, { sname: 'P2' }, { sname: 'P3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 2 }
@@ -55,8 +55,8 @@ const petrinets: PetriNet[] = [
 	},
 	// generic2
 	{
-		T: [{ tname: 't-1' }, { tname: 't-2' }],
-		S: [{ sname: 'p-1' }, { sname: 'p-2' }, { sname: 'p-3' }],
+		T: [{ tname: 'T1' }, { tname: 'T2' }],
+		S: [{ sname: 'P1' }, { sname: 'P2' }, { sname: 'P3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 1 }
@@ -112,6 +112,13 @@ const petrinets: PetriNet[] = [
 			{ ot: 2, os: 3 },
 			{ ot: 3, os: 4 }
 		]
+	},
+	// generic3
+	{
+		T: [{ tname: 'T1' }],
+		S: [{ sname: 'P1' }, { sname: 'P2' }],
+		I: [{ it: 1, is: 1 }],
+		O: [{ ot: 1, os: 2 }]
 	}
 ];
 
@@ -233,6 +240,14 @@ export default defineComponent({
 				} else {
 					source = d;
 					source.select('.shape').style('stroke', '#000').style('stroke-width', 4);
+				}
+			} else if (evt.altKey) {
+				if (source) {
+					target = d;
+					target.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
+				} else {
+					source = d;
+					source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
 				}
 			} else {
 				if (source) {
@@ -461,7 +476,7 @@ export default defineComponent({
 		async addPlace() {
 			console.log('add place');
 			placeCounter++;
-			const id = `p-${placeCounter}`;
+			const id = `P${placeCounter}`;
 
 			g.nodes.push({
 				id,
@@ -495,7 +510,7 @@ export default defineComponent({
 		async addTransition() {
 			console.log('add transition');
 			transitionCounter++;
-			const id = `t-${transitionCounter}`;
+			const id = `T${transitionCounter}`;
 
 			g.nodes.push({
 				id,
@@ -737,6 +752,25 @@ export default defineComponent({
 			this.refresh();
 			this.jsonOutput();
 		},
+		async mergePetrinets2() {
+			const resp2 = await fetch(`http://localhost:8888/api/models/${modelId}/model-composition2`, {
+				method: 'POST',
+				headers: {
+					Accept: 'application/json',
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					modelA,
+					modelB
+				})
+			});
+
+			mergedModel = await resp2.json();
+			g3 = parsePetriNet2IGraph(mergedModel);
+			g3 = runDagreLayout(_.cloneDeep(g3));
+			this.refresh();
+			this.jsonOutput();
+		},
 		// Pulls model ID from form and sends model to createModel function for the actual work
 		async drawModel() {
 			const resp = await fetch(`http://localhost:8888/api/models/${this.loadModelID}/json`, {
@@ -856,7 +890,8 @@ export default defineComponent({
 			g2 = { width: 500, height: 500, nodes: [], edges: [] };
 			g2 = runDagreLayout(_.cloneDeep(g2));
 			this.refresh();
-		}
+		},
+		groupNodes() {}
 	}
 });
 </script>
@@ -895,13 +930,15 @@ export default defineComponent({
 						<option :value="2">QNotQModel</option>
 						<option :value="3">typeModel</option>
 						<option :value="4">SIRD</option>
+						<option :value="5">generic3</option>
 					</select>
 				</label>
 				&nbsp;
 				<button type="button" @click="clearA">Clear Model A</button>
+				&nbsp;
+				<button type="button" @click="groupNodes">Group nodes</button>
 			</div>
 		</div>
-
 		<div style="display: flex">
 			<div id="playground" class="playground-panel"></div>
 			<div id="solution" class="playground-panel"></div>
@@ -917,6 +954,8 @@ export default defineComponent({
 				<input type="text" placeholder="States to merge A" v-model="stateNamesA" />
 				<input type="text" placeholder="States to merge B" v-model="stateNamesB" />
 				<button type="button" @click="mergePetrinets">Merge petrinets</button>
+				&nbsp;&nbsp;
+				<button type="button" @click="mergePetrinets2">Merge petrinets 2</button>
 			</label>
 		</form>
 		<br />
