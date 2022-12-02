@@ -1,7 +1,11 @@
 <template>
 	<section class="doc-view-container">
 		<div v-if="doc">
-			<div class="title">{{ doc.title }}</div>
+			<div v-if="docLink" class="title">
+				<a :href="docLink" target="_blank" rel="noreferrer noopener">{{ doc.title }}</a>
+			</div>
+			<div v-else class="title">{{ doc.title }}</div>
+
 			<div class="authors">{{ formatArticleAuthors(doc) }}</div>
 			<div class="journal">{{ doc.journal }}</div>
 			<div class="publisher">{{ doc.publisher }}</div>
@@ -34,13 +38,8 @@
 						"
 					>
 						<!-- render figure -->
-						<b>{{ ex.properties.title }}</b>
-						{{ ex.properties.contentText }}
-						<img
-							id="img"
-							:src="'data:image/jpeg;base64,' + ex.properties.image"
-							:alt="ex.properties.contentText"
-						/>
+						{{ ex.properties.caption ? ex.properties.caption : ex.properties.contentText }}
+						<img id="img" :src="'data:image/jpeg;base64,' + ex.properties.image" :alt="''" />
 					</template>
 					<template v-else>
 						<!-- render textual content -->
@@ -58,8 +57,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { getXDDArtifacts } from '@/services/data';
-import useResourcesStore from '@/stores/resources';
+import { getDocumentById, getXDDArtifacts } from '@/services/data';
 import { XDDArticle, XDDArtifact, XDDExtractionType } from '@/types/XDD';
 import { groupBy } from 'lodash';
 import { getDocumentDoi } from '@/utils/data-util';
@@ -70,13 +68,35 @@ const props = defineProps({
 		type: String,
 		default: ''
 	}
+	// NOTE that project is automatically injected as prop as well
 });
 
-const resourcesStore = useResourcesStore();
+const doc = ref<XDDArticle | null>(null);
 
-const doc = computed(() => resourcesStore.documents[props.id] || null);
+watch(
+	props,
+	async () => {
+		const id = props.id;
+		if (id !== '') {
+			// fetch doc from XDD
+			const d = await getDocumentById(id);
+			if (d) {
+				doc.value = d;
+			}
+		} else {
+			doc.value = null;
+		}
+	},
+	{
+		immediate: true
+	}
+);
 
 const formatArticleAuthors = (d: XDDArticle) => d.author.map((a) => a.name).join(', ');
+
+const docLink = computed(() =>
+	doc.value?.link && doc.value.link.length > 0 ? doc.value.link[0].url : null
+);
 
 const formatDescription = (d: XDDArticle) =>
 	(d.abstractText && typeof d.abstractText === 'string' ? d.abstractText : false) ||
@@ -100,8 +120,9 @@ watch(artifacts, (currentValue, oldValue) => {
 
 const fetchArtifacts = async () => {
 	if (doi.value !== '') {
-		// a 'type' may be used to filter the extractions to a given artifact types, e.g. Figure
-		artifacts.value = await getXDDArtifacts(doi.value);
+		const allArtifacts = await getXDDArtifacts(doi.value);
+		// filter out Document extraction type
+		artifacts.value = allArtifacts.filter((art) => art.askemClass !== XDDExtractionType.Document);
 	} else {
 		// note that some XDD documents do not have a valid doi
 		artifacts.value = [];

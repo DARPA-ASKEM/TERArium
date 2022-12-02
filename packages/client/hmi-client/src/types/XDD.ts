@@ -45,9 +45,18 @@ export type XDDArticle = {
 	year: string;
 	gddid: string; // mapped from _gddid
 	// eslint-disable-next-line no-underscore-dangle
+	_highlight: string[];
+	highlight: string[]; // TEMP: mapped from _highlight
+	// eslint-disable-next-line no-underscore-dangle
 	_gddid: string; // TEMP
 	// additional-client-side fields
 	relatedDocuments?: XDDArticle[];
+};
+
+export type PublicationAsset = {
+	id?: string;
+	xdd_uri: string; // this is the internal XDD id known as "docid" NOT "doi"
+	title: string;
 };
 
 export type XDDArtifactProperties = {
@@ -117,6 +126,7 @@ export type XDDResult = {
 };
 
 export type XDDSearchParams = {
+	docid?: string; // internal xdd document id
 	doi?: string;
 	title?: string;
 	term?: string;
@@ -125,7 +135,9 @@ export type XDDSearchParams = {
 	type?: XDDExtractionType;
 	ignoreBytes?: boolean;
 	fullResults?: boolean;
+	inclusive?: boolean;
 	includeScore?: boolean;
+	includeHighlights?: boolean;
 	facets?: boolean;
 	max?: number;
 	perPage?: number;

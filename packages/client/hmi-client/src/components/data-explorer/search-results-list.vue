@@ -4,6 +4,7 @@
 			v-if="resultType === ResourceType.MODEL"
 			class="list-view"
 			:models="filteredModels"
+			:raw-concept-facets="rawConceptFacets"
 			:selected-search-items="selectedSearchItems"
 			@toggle-model-selected="toggleDataItemSelected"
 		/>
@@ -11,15 +12,9 @@
 			v-if="resultType === ResourceType.XDD"
 			class="list-view"
 			:articles="filteredArticles"
+			:raw-concept-facets="rawConceptFacets"
 			:selected-search-items="selectedSearchItems"
 			@toggle-article-selected="toggleDataItemSelected"
-		/>
-		<common-listview
-			v-if="resultType === ResourceType.ALL"
-			class="list-view"
-			:input-items="dataItems"
-			:selected-search-items="selectedSearchItems"
-			@toggle-item-selected="toggleDataItemSelected"
 		/>
 	</div>
 </template>
@@ -28,7 +23,6 @@
 import { computed, PropType } from 'vue';
 import ModelsListview from '@/components/data-explorer/models-listview.vue';
 import ArticlesListview from '@/components/data-explorer/articles-listview.vue';
-import CommonListview from '@/components/data-explorer/common-listview.vue';
 import { Model } from '@/types/Model';
 import { XDDArticle } from '@/types/XDD';
 import { SearchResults, ResourceType, ResultType } from '@/types/common';
@@ -68,6 +62,13 @@ const filteredArticles = computed(() => {
 	}
 	return [];
 });
+const rawConceptFacets = computed(() => {
+	const resList = props.dataItems.find((res) => res.searchSubsystem === props.resultType);
+	if (resList) {
+		return resList.rawConceptFacets;
+	}
+	return null;
+});
 </script>
 
 <style lang="scss" scoped>
@@ -76,7 +77,6 @@ const filteredArticles = computed(() => {
 	width: 100%;
 	display: flex;
 	flex-direction: column;
-	padding-right: 10px;
 	gap: 1px;
 
 	.list-view {

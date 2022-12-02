@@ -1,19 +1,16 @@
 <template>
 	<div class="document-list-container">
 		<div
-			v-for="doc in documents"
-			:key="doc.gddid"
+			v-for="docAsset in documents"
+			:key="docAsset.xdd_uri"
 			class="doc-link"
-			:class="{ active: doc.gddid === docID }"
-			@click="openDocumentPage(doc)"
+			:class="{ active: docAsset.xdd_uri === documentId }"
+			@click="openDocumentPage(docAsset)"
 		>
-			<span class="doc-view-icon">
-				<DocumentView />
-			</span>
 			<span class="doc-title">
-				{{ doc.title }}
+				{{ docAsset.title }}
 			</span>
-			<span class="doc-delete-btn" @click.stop="removeDocument(doc)">
+			<span class="doc-delete-btn" @click.stop="removeDocument(docAsset)">
 				<IconClose32 />
 			</span>
 		</div>
@@ -26,36 +23,52 @@
  * Display a list of documents available in the current Project.
  */
 import useResourcesStore from '@/stores/resources';
-import { XDDArticle } from '@/types/XDD';
-import { getResourceID } from '@/utils/data-util';
-import { isEmpty } from 'lodash';
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import IconClose32 from '@carbon/icons-vue/es/close/32';
-import DocumentView from '@carbon/icons-vue/es/document--view/32';
+import { deleteAsset } from '@/services/project';
+import { PUBLICATIONS } from '@/types/Project';
+import { PublicationAsset } from '@/types/XDD';
 
 const router = useRouter();
 
 const resourcesStore = useResourcesStore();
-const documents = computed(() => resourcesStore.documents);
 
-const docID = ref('');
+const documentId = ref('');
+const documents = ref<PublicationAsset[]>([]);
 
-const openDocumentPage = (doc: XDDArticle) => {
+const openDocumentPage = async (docAsset: PublicationAsset) => {
 	// pass this doc id as param
-	docID.value = getResourceID(doc);
-	router.push({ path: `/docs/${docID.value}` });
+	documentId.value = docAsset.xdd_uri; // track selection
+	router.push({ path: `/docs/${docAsset.xdd_uri}` });
 };
 
-const removeDocument = (doc: XDDArticle) => {
-	resourcesStore.removeResource(doc);
-	router.push('/docs'); // clear the doc ID as a URL param
+const removeDocument = async (docAsset: PublicationAsset) => {
+	// remove the document from the project assets
+	if (resourcesStore.activeProject && resourcesStore.activeProjectAssets) {
+		const assetsType = PUBLICATIONS;
+		deleteAsset(resourcesStore.activeProject.id, assetsType, docAsset.id);
+		// remove also from the local cache
+		resourcesStore.activeProject.assets[PUBLICATIONS] = resourcesStore.activeProject.assets[
+			PUBLICATIONS
+		].filter((docId) => docId !== docAsset.id);
+		resourcesStore.activeProjectAssets[PUBLICATIONS] = resourcesStore.activeProjectAssets[
+			PUBLICATIONS
+		].filter((document) => document.id !== docAsset.id);
+		documents.value = resourcesStore.activeProjectAssets[PUBLICATIONS];
+	}
+
+	// if the user deleted the currently selected document, then clear its content from the view
+	if (docAsset.xdd_uri === documentId.value) {
+		router.push('/docs'); // clear the doc ID as a URL param
+	}
 };
 
 onMounted(() => {
-	const routeParams = router.currentRoute.value.params;
-	if (!isEmpty(routeParams) && routeParams.id !== '' && docID.value === '') {
-		docID.value = routeParams.id as string;
+	// get the list of publications associated with this project and display them
+	const documentsInCurrentProject = resourcesStore.activeProjectAssets?.publications;
+	if (documentsInCurrentProject) {
+		documents.value = documentsInCurrentProject;
 	}
 });
 </script>
@@ -64,10 +77,10 @@ onMounted(() => {
 .document-list-container {
 	overflow-y: auto;
 	margin-top: 1rem;
+	height: 100%;
 }
 
 .doc-link {
-	padding: 0.5rem;
 	cursor: pointer;
 	display: flex;
 	flex-direction: row;

@@ -24,11 +24,14 @@ public class DocumentResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Tag(name = "Get all xdd documents via proxy")
 	public Response getDocuments(
+		@QueryParam("docid") String docid,
 		@QueryParam("doi") String doi,
 		@QueryParam("title") String title,
 		@QueryParam("term") String term,
 		@QueryParam("dataset") String dataset,
 		@QueryParam("include_score") String include_score,
+		@QueryParam("include_highlights") String include_highlights,
+		@QueryParam("inclusive") String inclusive,
 		@QueryParam("full_results") String full_results,
 		@QueryParam("max") String max,
 		@QueryParam("per_page") String per_page,
@@ -40,13 +43,15 @@ public class DocumentResource {
 		@QueryParam("publisher") String publisher
 	) {
 		// only go ahead with the query if at least one param is present
-		if (doi != null || title != null || term != null) {
+		if (docid != null || doi != null || title != null || term != null) {
 			// for consistency, if doi/title are valid, then make sure other params are null
-			if (doi != null) {
+			if (docid != null || doi != null) {
 				title = null;
 				term = null;
 				dataset = null;
 				include_score = null;
+				include_highlights = null;
+				inclusive = null;
 				full_results = null;
 				max = null;
 				per_page = null;
@@ -58,9 +63,12 @@ public class DocumentResource {
 			}
 			if (title != null) {
 				doi = null;
+				docid = null;
 				term = null;
 				dataset = null;
 				include_score = null;
+				include_highlights = null;
+				inclusive = null;
 				full_results = null;
 				max = null;
 				per_page = null;
@@ -71,7 +79,7 @@ public class DocumentResource {
 				publisher = null;
 			}
 			return proxy.getDocuments(
-				doi, title, term, dataset, include_score, full_results, max, per_page, dict, facets,
+				docid, doi, title, term, dataset, include_score, include_highlights, inclusive, full_results, max, per_page, dict, facets,
 				min_published, max_published, pubname, publisher);
 		}
 		return Response.noContent().build();
