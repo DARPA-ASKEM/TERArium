@@ -16,7 +16,8 @@ interface EdgeData {
 }
 enum NodeType {
 	Species = 'S',
-	Transition = 'T'
+	Transition = 'T',
+	Group = 'G'
 }
 
 // Graphs
@@ -41,8 +42,8 @@ let mergedModel: PetriNet = { T: [], S: [], I: [], O: [] };
 const petrinets: PetriNet[] = [
 	// generic
 	{
-		T: [{ tname: 'T1' }, { tname: 'T2' }],
-		S: [{ sname: 'P1' }, { sname: 'P2' }, { sname: 'P3' }],
+		T: [{ tname: 't1' }, { tname: 't2' }],
+		S: [{ sname: 'p1' }, { sname: 'p2' }, { sname: 'p3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 2 }
@@ -55,8 +56,8 @@ const petrinets: PetriNet[] = [
 	},
 	// generic2
 	{
-		T: [{ tname: 'T1' }, { tname: 'T2' }],
-		S: [{ sname: 'P1' }, { sname: 'P2' }, { sname: 'P3' }],
+		T: [{ tname: 't1' }, { tname: 't2' }],
+		S: [{ sname: 'p1' }, { sname: 'p2' }, { sname: 'p3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 1 }
@@ -156,6 +157,9 @@ class SampleRenderer extends graphScaffolder.BasicRenderer<NodeData, EdgeData> {
 		const transitions = selection.filter(
 			(d) => d.data.type === 'transition' || d.data.type === NodeType.Transition
 		);
+		const groups = selection.filter(
+			(d) => d.data.type === 'group' || d.data.type === NodeType.Group
+		);
 
 		transitions
 			.append('rect')
@@ -172,6 +176,14 @@ class SampleRenderer extends graphScaffolder.BasicRenderer<NodeData, EdgeData> {
 			.attr('cy', (d) => d.height * 0.5)
 			.attr('r', (d) => d.width * 0.5)
 			.attr('fill', '#f80');
+
+		groups
+			.append('circle')
+			.classed('shape', true)
+			.attr('cx', (d) => d.width * 0.5)
+			.attr('cy', (d) => d.height * 0.5)
+			.attr('r', (d) => d.width * 0.5)
+			.attr('fill', 'green');
 
 		selection
 			.append('text')
@@ -199,6 +211,7 @@ g3 = runDagreLayout(_.cloneDeep(g3));
 
 let placeCounter = 0;
 let transitionCounter = 0;
+let groupCounter = 0;
 let modelId = ''; // The session model
 let source: any = null;
 let target: any = null;
@@ -232,6 +245,8 @@ export default defineComponent({
 			runLayout: runDagreLayout
 		});
 
+		let drawArrow: boolean = true;
+
 		renderer.on('node-click', (_evtName, evt, d) => {
 			if (evt.shiftKey) {
 				if (source) {
@@ -242,6 +257,7 @@ export default defineComponent({
 					source.select('.shape').style('stroke', '#000').style('stroke-width', 4);
 				}
 			} else if (evt.altKey) {
+				drawArrow = false;
 				if (source) {
 					target = d;
 					target.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
@@ -249,6 +265,7 @@ export default defineComponent({
 					source = d;
 					source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
 				}
+				console.log(d.groups[0]);
 			} else {
 				if (source) {
 					source.select('.shape').style('stroke', null).style('stroke-width', null);
@@ -260,7 +277,7 @@ export default defineComponent({
 				target = null;
 			}
 
-			if (source && target) {
+			if (source && target && drawArrow) {
 				this.addEdge(source, target);
 				source = null;
 				target = null;
@@ -289,6 +306,40 @@ export default defineComponent({
 		};
 	},
 	methods: {
+		async groupNodes() {
+			console.log('create group');
+			groupCounter++;
+			const id = `g${groupCounter}`;
+
+			g.nodes.push({
+				id,
+				label: id,
+				x: Math.random() * 500,
+				y: Math.random() * 500,
+				height: 50,
+				width: 50,
+				data: { type: 'group' },
+				nodes: []
+			});
+			this.refresh();
+
+			// await fetch(`http://localhost:8888/api/models/${modelId}`, {
+			// 	method: 'POST',
+			// 	headers: {
+			// 		Accept: 'application/json',
+			// 		'Content-Type': 'application/json'
+			// 	},
+			// 	body: JSON.stringify({
+			// 		nodes: [
+			// 			{
+			// 				name: id,
+			// 				type: 'S'
+			// 			}
+			// 		]
+			// 	})
+			// });
+			this.jsonOutput();
+		},
 		async refresh() {
 			await renderer?.setData(g);
 			await renderer?.render();
@@ -476,7 +527,7 @@ export default defineComponent({
 		async addPlace() {
 			console.log('add place');
 			placeCounter++;
-			const id = `P${placeCounter}`;
+			const id = `p${placeCounter}`;
 
 			g.nodes.push({
 				id,
@@ -510,7 +561,7 @@ export default defineComponent({
 		async addTransition() {
 			console.log('add transition');
 			transitionCounter++;
-			const id = `T${transitionCounter}`;
+			const id = `t${transitionCounter}`;
 
 			g.nodes.push({
 				id,
@@ -890,8 +941,7 @@ export default defineComponent({
 			g2 = { width: 500, height: 500, nodes: [], edges: [] };
 			g2 = runDagreLayout(_.cloneDeep(g2));
 			this.refresh();
-		},
-		groupNodes() {}
+		}
 	}
 });
 </script>
