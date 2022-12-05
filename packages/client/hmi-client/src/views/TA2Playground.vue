@@ -1037,7 +1037,8 @@ export default defineComponent({
 
 <style scoped>
 .playground {
-	margin: 10px;
+	padding: 10px;
+	overflow-y: scroll;
 }
 
 .playground-panel {
