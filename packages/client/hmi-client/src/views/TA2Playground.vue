@@ -265,7 +265,7 @@ export default defineComponent({
 					source = d;
 					source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
 				}
-				console.log(d.groups[0]);
+				console.log(Object.values(d)[0], d);
 			} else {
 				if (source) {
 					source.select('.shape').style('stroke', null).style('stroke-width', null);
@@ -321,6 +321,7 @@ export default defineComponent({
 				data: { type: 'group' },
 				nodes: []
 			});
+			console.log(g);
 			this.refresh();
 
 			// await fetch(`http://localhost:8888/api/models/${modelId}`, {
