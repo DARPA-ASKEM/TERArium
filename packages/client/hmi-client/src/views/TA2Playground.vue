@@ -4,16 +4,10 @@ import { petriNetValidator, PetriNet } from '@/utils/petri-net-validator';
 import * as d3 from 'd3';
 import _ from 'lodash';
 import { defineComponent, ref } from 'vue';
-import { parsePetriNet2IGraph } from '@/services/model';
+import { NodeData, EdgeData, parsePetriNet2IGraph } from '@/services/model';
 import { fetchStratificationResult } from '@/services/models/stratification-service';
 import { runDagreLayout, D3SelectionINode, D3SelectionIEdge } from '@/services/graph';
 
-interface NodeData {
-	type: string;
-}
-interface EdgeData {
-	val: number;
-}
 enum NodeType {
 	Species = 'S',
 	Transition = 'T',
@@ -42,8 +36,8 @@ let mergedModel: PetriNet = { T: [], S: [], I: [], O: [] };
 const petrinets: PetriNet[] = [
 	// generic
 	{
-		T: [{ tname: 't1' }, { tname: 't2' }],
-		S: [{ sname: 'p1' }, { sname: 'p2' }, { sname: 'p3' }],
+		T: [{ tname: 't-1' }, { tname: 't-2' }],
+		S: [{ sname: 'p-1' }, { sname: 'p-2' }, { sname: 'p-3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 2 }
@@ -56,8 +50,8 @@ const petrinets: PetriNet[] = [
 	},
 	// generic2
 	{
-		T: [{ tname: 't1' }, { tname: 't2' }],
-		S: [{ sname: 'p1' }, { sname: 'p2' }, { sname: 'p3' }],
+		T: [{ tname: 't-1' }, { tname: 't-2' }],
+		S: [{ sname: 'p-1' }, { sname: 'p-2' }, { sname: 'p-3' }],
 		I: [
 			{ it: 1, is: 1 },
 			{ it: 2, is: 1 }
@@ -219,6 +213,9 @@ let target: any = null;
 let numRabbits = 100;
 let numWolves = 10;
 
+let nodesToGroup: IGraph[] = [];
+const groupedNodes = new Map<string, IGraph>();
+
 export default defineComponent({
 	name: 'TA2Playground',
 	async mounted() {
@@ -245,7 +242,7 @@ export default defineComponent({
 			runLayout: runDagreLayout
 		});
 
-		let drawArrow: boolean = true;
+		let drawEdge: boolean = true;
 
 		renderer.on('node-click', (_evtName, evt, d) => {
 			if (evt.shiftKey) {
@@ -257,7 +254,10 @@ export default defineComponent({
 					source.select('.shape').style('stroke', '#000').style('stroke-width', 4);
 				}
 			} else if (evt.altKey) {
-				drawArrow = false;
+				drawEdge = false;
+				const selectedNode = Object.values(Object.values(Object.values(d)[0][0])[0])[0]; // Temporary way to extract selected node data
+				nodesToGroup.push(selectedNode);
+				console.log(nodesToGroup);
 				if (source) {
 					target = d;
 					target.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
@@ -265,7 +265,6 @@ export default defineComponent({
 					source = d;
 					source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
 				}
-				console.log(Object.values(d)[0], d);
 			} else {
 				if (source) {
 					source.select('.shape').style('stroke', null).style('stroke-width', null);
@@ -277,7 +276,7 @@ export default defineComponent({
 				target = null;
 			}
 
-			if (source && target && drawArrow) {
+			if (source && target && drawEdge) {
 				this.addEdge(source, target);
 				source = null;
 				target = null;
@@ -307,9 +306,30 @@ export default defineComponent({
 	},
 	methods: {
 		async groupNodes() {
+			if (nodesToGroup.length < 1) return;
+
 			console.log('create group');
+			console.log(nodesToGroup, g, modelId);
+
 			groupCounter++;
-			const id = `g${groupCounter}`;
+			const id = `g-${groupCounter}`;
+
+			g.nodes = g.nodes.filter((node) => !nodesToGroup.includes(node));
+
+			// If source and target is in the node group and isn't connected to anything outside the node group
+			const nodesToGroupIDs = nodesToGroup.map((node) => node.id);
+			for (let i = 0; i < nodesToGroupIDs.length; i++) {
+				const ID = nodesToGroupIDs[i];
+				g.edges = g.edges.filter(
+					(edge) =>
+						(edge.source === ID && nodesToGroupIDs.includes(edge.target)) ||
+						(edge.target === ID && nodesToGroupIDs.includes(edge.source))
+				);
+			}
+
+			// Save grouped nodes and empty nodes that would be about to be grouped
+			groupedNodes.set(id, [...nodesToGroup]);
+			nodesToGroup = [];
 
 			g.nodes.push({
 				id,
@@ -321,7 +341,7 @@ export default defineComponent({
 				data: { type: 'group' },
 				nodes: []
 			});
-			console.log(g);
+			console.log(g, modelId);
 			this.refresh();
 
 			// await fetch(`http://localhost:8888/api/models/${modelId}`, {
@@ -528,7 +548,7 @@ export default defineComponent({
 		async addPlace() {
 			console.log('add place');
 			placeCounter++;
-			const id = `p${placeCounter}`;
+			const id = `p-${placeCounter}`;
 
 			g.nodes.push({
 				id,
@@ -562,7 +582,7 @@ export default defineComponent({
 		async addTransition() {
 			console.log('add transition');
 			transitionCounter++;
-			const id = `t${transitionCounter}`;
+			const id = `t-${transitionCounter}`;
 
 			g.nodes.push({
 				id,
