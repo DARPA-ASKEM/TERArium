@@ -318,13 +318,16 @@ export default defineComponent({
 
 			// If source and target is in the node group and isn't connected to anything outside the node group
 			const nodesToGroupIDs = nodesToGroup.map((node) => node.id);
+
+			console.log(g.edges);
 			for (let i = 0; i < nodesToGroupIDs.length; i++) {
 				const ID = nodesToGroupIDs[i];
 				g.edges = g.edges.filter(
 					(edge) =>
-						(edge.source === ID && nodesToGroupIDs.includes(edge.target)) ||
-						(edge.target === ID && nodesToGroupIDs.includes(edge.source))
+						(edge.source !== ID && !nodesToGroupIDs.includes(edge.target)) ||
+						(edge.target !== ID && !nodesToGroupIDs.includes(edge.source))
 				);
+				console.log(g.edges);
 			}
 
 			// Save grouped nodes and empty nodes that would be about to be grouped
@@ -1026,7 +1029,9 @@ export default defineComponent({
 				<input type="text" placeholder="States to merge B" v-model="stateNamesB" />
 				<button type="button" @click="mergePetrinets">Merge petrinets</button>
 				&nbsp;&nbsp;
-				<button type="button" @click="mergePetrinets2">Merge petrinets 2</button>
+				<button type="button" disabled style="opacity: 0.5" @click="mergePetrinets2">
+					Merge petrinets 2
+				</button>
 			</label>
 		</form>
 		<br />
