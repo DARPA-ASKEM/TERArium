@@ -57,6 +57,18 @@ const graphData = {
 }
 ```
 
+The structure here is typed as below, where INode and IEdge are the data structures graph-scaffolder operates on, while V and E are external/custom data that bind to node and edge respectively.
+
+```
+IGraph<V, E> {
+	nodes: INode<V>[];
+	edges: IEdge<E>[];
+	width?: number;
+	height?: number;
+}
+```
+
+
 ### Usage
 Simple renderer with Typescript
 
