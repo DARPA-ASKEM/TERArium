@@ -3,7 +3,7 @@
 		<div class="add-selected-buttons">
 			<dropdown-button
 				:inner-button-label="'Add to a project'"
-				:is-dropdown-left-aligned="false"
+				:is-dropdown-left-aligned="true"
 				:items="projectsNames"
 				@item-selected="addAssetsToProject"
 			/>
@@ -43,7 +43,6 @@ const projectsNames = computed(() => projectsList.value.map((p) => p.name));
 const addResourcesToProject = async (projectId: string) => {
 	// send selected items to the store
 	const body: PublicationAsset = {
-		id: projectId,
 		xdd_uri: props.selectedArticle.gddid,
 		title: props.selectedArticle.title
 	};
@@ -98,6 +97,8 @@ onMounted(async () => {
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
+	/* HACK: Ensure the pane is at least as long as the dropdown-button's list can be so the list isn't clipped at the bottom. */
+	padding-bottom: 300px;
 }
 
 .add-selected-buttons {
