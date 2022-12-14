@@ -10,9 +10,9 @@ import { runDagreLayout, D3SelectionINode, D3SelectionIEdge } from '@/services/g
 import API from '@/api/api';
 
 enum NodeType {
-	Species = 'S',
-	Transition = 'T',
-	Group = 'G'
+	Species = 'species',
+	Transition = 'transition',
+	Group = 'custom'
 }
 
 // Graphs
@@ -146,15 +146,9 @@ class SampleRenderer extends graphScaffolder.BasicRenderer<NodeData, EdgeData> {
 	}
 
 	renderNodes(selection: D3SelectionINode<NodeData>) {
-		const species = selection.filter(
-			(d) => d.data.type === 'species' || d.data.type === NodeType.Species
-		);
-		const transitions = selection.filter(
-			(d) => d.data.type === 'transition' || d.data.type === NodeType.Transition
-		);
-		const groups = selection.filter(
-			(d) => d.data.type === 'group' || d.data.type === NodeType.Group
-		);
+		const species = selection.filter((d) => d.type === NodeType.Species);
+		const transitions = selection.filter((d) => d.type === NodeType.Transition);
+		const groups = selection.filter((d) => d.type === NodeType.Group);
 
 		transitions
 			.append('rect')
@@ -206,7 +200,7 @@ g3 = runDagreLayout(_.cloneDeep(g3));
 
 let placeCounter = 0;
 let transitionCounter = 0;
-let groupCounter = 0;
+// let groupCounter = 0;
 let modelId = ''; // The session model
 let source: any = null;
 let target: any = null;
@@ -214,8 +208,8 @@ let target: any = null;
 let numRabbits = 100;
 let numWolves = 10;
 
-let nodesToGroup: IGraph[] = [];
-const groupedNodes = new Map<string, IGraph>();
+let nodeIDsToGroup: string[] = [];
+// const groupedNodes = new Map<string, IGraph>();
 
 export default defineComponent({
 	name: 'TA2Playground',
@@ -246,6 +240,7 @@ export default defineComponent({
 		let drawEdge: boolean = true;
 
 		renderer.on('node-click', (_evtName, evt, d) => {
+			console.log(d);
 			if (evt.shiftKey) {
 				if (source) {
 					target = d;
@@ -257,25 +252,55 @@ export default defineComponent({
 			} else if (evt.altKey) {
 				drawEdge = false;
 				const selectedNode = Object.values(Object.values(Object.values(d)[0][0])[0])[0]; // Temporary way to extract selected node data
-				nodesToGroup.push(selectedNode);
-				console.log(nodesToGroup);
-				if (source) {
-					target = d;
-					target.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
+
+				if (!_.isEmpty(selectedNode?.nodes)) {
+					// If a group is selected make sure it's the only one selected
+					nodeIDsToGroup = [];
+				}
+
+				// if (_.isEmpty(selectedNode?.nodes)) { // If current selected node is not a group
+				// 	let firstSelectedNode = g.nodes.filter(node => node.id === nodeIDsToGroup[0]);
+				// 	console.log(firstSelectedNode)
+				// 	if (!_.isEmpty(firstSelectedNode?.nodes)) { // Switch to selecting normal nongroup nodes
+				// 		console.log(firstSelectedNode)
+				// 		nodeIDsToGroup = [];
+				// 	}
+				// }
+
+				if (nodeIDsToGroup.includes(selectedNode?.id)) {
+					const indexToRemove = nodeIDsToGroup.indexOf(selectedNode?.id);
+					nodeIDsToGroup.splice(indexToRemove, 1);
+					if (source) {
+						target = d;
+						target.select('.shape').style('stroke', null).style('stroke-width', null);
+					} else {
+						source = d;
+						source.select('.shape').style('stroke', null).style('stroke-width', null);
+					}
 				} else {
-					source = d;
-					source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
+					nodeIDsToGroup.push(selectedNode?.id);
+					if (source) {
+						target = d;
+						target.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
+					} else {
+						source = d;
+						source.select('.shape').style('stroke', 'blue').style('stroke-width', 4);
+					}
 				}
-			} else {
-				if (source) {
-					source.select('.shape').style('stroke', null).style('stroke-width', null);
-				}
-				if (target) {
-					target.select('.shape').style('stroke', null).style('stroke-width', null);
-				}
-				source = null;
-				target = null;
+
+				console.log(selectedNode, nodeIDsToGroup);
 			}
+
+			// else {
+			// 	if (source) {
+			// 		source.select('.shape').style('stroke', null).style('stroke-width', null);
+			// 	}
+			// 	if (target) {
+			// 		target.select('.shape').style('stroke', null).style('stroke-width', null);
+			// 	}
+			// 	source = null;
+			// 	target = null;
+			// }
 
 			if (source && target && drawEdge) {
 				this.addEdge(source, target);
@@ -305,65 +330,6 @@ export default defineComponent({
 		};
 	},
 	methods: {
-		async groupNodes() {
-			if (nodesToGroup.length < 1) return;
-
-			console.log('create group');
-			console.log(nodesToGroup, g, modelId);
-
-			groupCounter++;
-			const id = `g-${groupCounter}`;
-
-			g.nodes = g.nodes.filter((node) => !nodesToGroup.includes(node));
-
-			// If source and target is in the node group and isn't connected to anything outside the node group
-			const nodesToGroupIDs = nodesToGroup.map((node) => node.id);
-
-			console.log(g.edges);
-			for (let i = 0; i < nodesToGroupIDs.length; i++) {
-				const ID = nodesToGroupIDs[i];
-				g.edges = g.edges.filter(
-					(edge) =>
-						(edge.source !== ID && !nodesToGroupIDs.includes(edge.target)) ||
-						(edge.target !== ID && !nodesToGroupIDs.includes(edge.source))
-				);
-				console.log(g.edges);
-			}
-
-			// Save grouped nodes and empty nodes that would be about to be grouped
-			groupedNodes.set(id, [...nodesToGroup]);
-			nodesToGroup = [];
-
-			g.nodes.push({
-				id,
-				label: id,
-				x: Math.random() * 500,
-				y: Math.random() * 500,
-				height: 50,
-				width: 50,
-				data: { type: 'group' },
-				nodes: []
-			});
-			console.log(g, modelId);
-			this.refresh();
-
-			// await fetch(`http://localhost:8888/api/models/${modelId}`, {
-			// 	method: 'POST',
-			// 	headers: {
-			// 		Accept: 'application/json',
-			// 		'Content-Type': 'application/json'
-			// 	},
-			// 	body: JSON.stringify({
-			// 		nodes: [
-			// 			{
-			// 				name: id,
-			// 				type: 'S'
-			// 			}
-			// 		]
-			// 	})
-			// });
-			this.jsonOutput();
-		},
 		async refresh() {
 			await renderer?.setData(g);
 			await renderer?.render();
@@ -391,6 +357,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				nodes: [],
+				type: 'species',
 				data: { type: 'species' }
 			});
 			g.nodes.push({
@@ -401,6 +368,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				nodes: [],
+				type: 'species',
 				data: { type: 'species' }
 			});
 			g.nodes.push({
@@ -411,6 +379,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				nodes: [],
+				type: 'transition',
 				data: { type: 'transition' }
 			});
 			g.nodes.push({
@@ -421,6 +390,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				nodes: [],
+				type: 'transition',
 				data: { type: 'transition' }
 			});
 			g.nodes.push({
@@ -431,6 +401,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				nodes: [],
+				type: 'transition',
 				data: { type: 'transition' }
 			});
 
@@ -542,6 +513,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				data: { type: 'species' },
+				type: 'species',
 				nodes: []
 			});
 			this.refresh();
@@ -569,6 +541,7 @@ export default defineComponent({
 				height: 50,
 				width: 50,
 				data: { type: 'transition' },
+				type: 'transition',
 				nodes: []
 			});
 			this.refresh();
@@ -603,7 +576,8 @@ export default defineComponent({
 				height,
 				width,
 				data: { type },
-				nodes: []
+				nodes: [],
+				type
 			});
 
 			if (createFlag === true) {
@@ -904,6 +878,25 @@ export default defineComponent({
 			g2 = { width: 500, height: 500, nodes: [], edges: [] };
 			g2 = runDagreLayout(_.cloneDeep(g2));
 			this.refresh();
+		},
+		groupNodes() {
+			let groupNumber = 1;
+			for (let i = 0; i < g.nodes.length; i++) {
+				if (!_.isEmpty(g.nodes[i].nodes.length)) groupNumber++;
+			}
+
+			const newDefaultName: string = `group-${groupNumber}`;
+
+			graphScaffolder.group(renderer, newDefaultName, nodeIDsToGroup);
+			g = runDagreLayout(_.cloneDeep(g));
+			console.log(g);
+			this.refresh();
+		},
+		ungroupNodes() {
+			graphScaffolder.ungroup(renderer, 'group-1');
+			g = runDagreLayout(_.cloneDeep(g));
+			console.log(g);
+			this.refresh();
 		}
 	}
 });
@@ -949,7 +942,8 @@ export default defineComponent({
 				&nbsp;
 				<button type="button" @click="clearA">Clear Model A</button>
 				&nbsp;
-				<button type="button" @click="groupNodes">Group nodes</button>
+				<button type="button" @click="groupNodes()">Group nodes</button>
+				<button type="button" @click="ungroupNodes()">Ungroup</button>
 			</div>
 		</div>
 		<div style="display: flex">
