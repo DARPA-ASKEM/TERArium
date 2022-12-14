@@ -2,6 +2,8 @@
 FROM node:18.12.1-alpine as builder
 WORKDIR /code
 COPY package.json /code
+COPY .yarn/ /code/.yarn/
+COPY .yarnrc.yml /code
 COPY yarn.lock /code
 COPY packages/client/graph-scaffolder/package.json /code/packages/client/graph-scaffolder/
 COPY packages/client/hmi-client/package.json /code/packages/client/hmi-client/
