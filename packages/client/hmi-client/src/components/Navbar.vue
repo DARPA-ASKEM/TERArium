@@ -3,13 +3,13 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import Menu from 'primevue/menu';
-import { useCurrentRouter } from '@/router/index';
+import { RoutePath, useCurrentRouter } from '@/router/index';
 import { Project } from '@/types/Project';
 import useResourcesStore from '@/stores/resources';
 import useAuthStore from '@/stores/auth';
 import Dialog from 'primevue/dialog';
+import SearchBar from '@/components/data-explorer/search-bar.vue';
 
-const emit = defineEmits(['show-data-explorer']);
 const router = useRouter();
 const { isCurrentRouteHome } = useCurrentRouter();
 const auth = useAuthStore();
@@ -45,24 +45,21 @@ const userInitials = computed(() =>
 		?.split(' ')
 		.reduce((accumulator, currentValue) => accumulator.concat(currentValue.substring(0, 1)), '')
 );
+
+function searchTextChanged(value) {
+	router.push({ path: RoutePath.DataExplorer, query: { q: value } });
+}
 </script>
 
 <template>
 	<header>
-		<img v-if="isHome" src="@assets/images/logo.png" height="32" width="128" alt="logo" />
-		<img v-else src="@assets/images/icon.png" height="32" width="32" alt="TERArium icon" />
+		<img src="@assets/images/logo.png" height="32" width="128" alt="logo" />
 		<p v-if="!isHome">
 			<a @click="goToHomepage">Projects</a>
 			<span>{{ projectName }}</span>
 		</p>
+		<SearchBar class="searchbar" @search-text-changed="searchTextChanged" />
 		<aside>
-			<Button
-				class="data-explorer p-button p-button-icon-only p-button-rounded"
-				@click="emit('show-data-explorer')"
-				aria-label="Data Explorer"
-			>
-				<i class="pi pi-search" />
-			</Button>
 			<Button
 				class="p-button p-button-icon-only p-button-rounded p-button-sm user-button"
 				@click="showUserMenu"
@@ -91,7 +88,7 @@ header {
 	background-color: var(--un-color-body-surface-primary);
 	box-shadow: var(--un-box-shadow-small);
 	display: flex;
-	justify-content: space-between;
+	justify-content: left;
 	gap: 2rem;
 	min-height: var(--header-height);
 	padding: 0.5rem 1rem;
@@ -119,26 +116,17 @@ p a:focus {
 
 aside {
 	display: flex;
-	/* Push it to the far side */
+	margin-left: auto;
 	gap: 1rem;
 }
 
-.p-button {
-	background-color: var(--un-color-accent);
-}
-
-.p-button:enabled:hover,
-.p-button:enabled:focus {
-	background-color: var(--un-color-accent-light);
-}
-
 .user-button {
-	color: var(--un-color-text-secondary);
+	color: var(--un-color-body-text-secondary);
 	background-color: var(--un-color-body-surface-background);
 }
 
 .user-button:enabled:hover {
-	color: var(--un-color-text-secondary);
+	color: var(--un-color-body-text-secondary);
 	background-color: var(--un-color-body-surface-secondary);
 }
 </style>
